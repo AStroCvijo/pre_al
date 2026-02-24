@@ -1,64 +1,18 @@
-import kagglehub
-import pandas as pd
 import numpy as np
-import os
-from sklearn.model_selection import GroupShuffleSplit
-from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
+
+from data.dataset import prepare_data
 from model.LSTM import LSTM
 
 
-# Download data
-path = kagglehub.dataset_download("faresls/fd001-prepared-data")
-df = pd.read_csv(os.path.join(path, "train_FD001_prepared.csv"))
-
-# Labels
-h = 30
-df["label"] = (df["RUL"] <= h).astype(int)
-sensor_cols = [col for col in df.columns if col not in ["unit_nr", "cycle", "RUL", "label"]]
-
-# Sliding window
-w = 30
-
-X, y, groups = [], [], []
-for unit, group in df.groupby("unit_nr"):
-    data = group[sensor_cols].values
-    labels = group["label"].values
-    for i in range(len(data) - w):
-        X.append(data[i:i+w])
-        y.append(labels[i+w])
-        groups.append(unit)
-
-X = np.array(X, dtype=np.float32)
-y = np.array(y, dtype=np.float32)
-groups = np.array(groups)
-
-# Split into train and test datasets
-splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-train_idx, test_idx = next(splitter.split(X, y, groups))
-
-X_train, X_test = X[train_idx], X[test_idx]
-y_train, y_test = y[train_idx], y[test_idx]
-
-# Make dataloaders
-class EngineDataset(Dataset):
-    def __init__(self, X, y):
-        self.X = torch.tensor(X)
-        self.y  = torch.tensor(y)
-    def __len__(self): 
-        return len(self.X)
-    def __getitem__(self, i):
-        return self.X[i], self.y[i]
-    
-train_loader = DataLoader(EngineDataset(X_train, y_train), batch_size=64, shuffle=True)
-test_loader  = DataLoader(EngineDataset(X_test,  y_test),  batch_size=64, shuffle=False)
+train_loader, test_loader, y_train, n_features = prepare_data()
 
 # Initialize the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-model = LSTM(n_features=len(sensor_cols)).to(device)
+model = LSTM(n_features=n_features).to(device)
 
 # Weighted loss
 pos_weight = torch.tensor([(1 - y_train.mean()) / y_train.mean()]).to(device)
@@ -99,8 +53,25 @@ all_labels = np.array(all_labels)
 threshold = 0.5
 preds = (all_probs >= threshold).astype(int)
 
-print("\n── Classification Report ──")
+print(f"\n── Classification Report (threshold={threshold}) ──")
 print(classification_report(all_labels, preds, target_names=["Normal", "Incident"]))
 print(f"ROC-AUC: {roc_auc_score(all_labels, all_probs):.4f}")
 print("\nConfusion Matrix:")
 print(confusion_matrix(all_labels, preds))
+
+# Threshold sweep — precision/recall trade-off for alerting
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+thresholds = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+print("\n── Threshold Sweep ──")
+print(f"{'Threshold':>10} | {'Precision':>9} | {'Recall':>6} | {'F1':>6}")
+print("-" * 44)
+best_f1, best_thresh = 0, 0.5
+for t in thresholds:
+    p = (all_probs >= t).astype(int)
+    pr = precision_score(all_labels, p, zero_division=0)
+    re = recall_score(all_labels, p, zero_division=0)
+    f1 = f1_score(all_labels, p, zero_division=0)
+    print(f"{t:>10.2f} | {pr:>9.4f} | {re:>6.4f} | {f1:>6.4f}")
+    if f1 > best_f1:
+        best_f1, best_thresh = f1, t
