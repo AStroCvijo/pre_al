@@ -1,10 +1,10 @@
-# Predictive Alerting
+# 🚨 Predictive Alerting
   
 Binary classifier that predicts whether an engine will fail within the next **H** cycles, given the last **W** cycles of sensor readings. Trained on the NASA CMAPSS FD001 benchmark.
 
 ---
 
-## Problem Formulation
+## 🔧 Problem Formulation
 
 At each timestep *t*, the model receives a window of *W* consecutive sensor readings and outputs the probability that a failure will occur within the next *H* cycles. This is framed as binary classification:
 
@@ -22,7 +22,7 @@ label(t) = 1 if RUL(t + W) ≤ H
 
 ---
 
-## Dataset
+## 📊 Dataset
 
 **NASA CMAPSS FD001** — a widely used turbofan engine degradation benchmark.
 
@@ -30,13 +30,13 @@ label(t) = 1 if RUL(t + W) ≤ H
 
 - 14 sensor channels (after preprocessing removes constant/near-constant sensors)
 
-- Labels are heavily imbalanced: most timesteps are in the "normal" region; only the final cycles of each engine are incidents
+- Labels are heavily imbalanced: most timesteps are in the "normal" region; only the final cycles of each engine are incidents ⚠️
 
 The dataset is downloaded automatically via `kagglehub` from [faresls/fd001-prepared-data](https://www.kaggle.com/datasets/faresls/fd001-prepared-data).
 
 ---
 
-## Modeling Choices
+## 🧠 Modeling Choices
 
 ### Why LSTM
 
@@ -52,7 +52,7 @@ Alternatives considered:
 | 1D-CNN              | Captures local patterns well but misses long-range dependencies              |
 | Transformer         | Stronger on long sequences but its juts an overkill for W=30 and adds training complexity   |
 
-### Architecture
+### 🏗️ Architecture
 
 ```
 
@@ -72,7 +72,7 @@ Input: (batch, W=30, n_sensors)
 
 -  **dropout=0.3:** regularises both the LSTM stack and the classifier head
 
-### Class Imbalance
+### ⚖️ Class Imbalance
 
 Incidents are a minority class. Using standard BCE loss would push the model to predict "normal" almost always. To compensate, the loss is weighted by the inverse class ratio:
 
@@ -86,13 +86,13 @@ criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
 This makes each positive sample count proportionally more during training.
 
-### Train / Test Split
+### 🔀 Train / Test Split
 
 Split is done with `GroupShuffleSplit` on `unit_nr`. This guarantees that no engine appears in both train and test.
 
 ---
 
-## Evaluation Setup
+## 📈 Evaluation Setup
 
 ### Metrics
 
@@ -104,9 +104,9 @@ Split is done with `GroupShuffleSplit` on `unit_nr`. This guarantees that no eng
 | ROC-AUC          | Threshold-independent ranking quality                        |
 | Confusion Matrix | Raw counts of TP / FP / FN / TN                              |
 
-In an alerting context, **recall is usually more important than precision** since a missed failure is more costly than a false alarm. This informs threshold selection.
+In an alerting context, **recall is usually more important than precision** since a missed failure is more costly than a false alarm 💸. This informs threshold selection.
 
-### Alert Threshold
+### 🎯 Alert Threshold
 
 The model outputs a probability in [0, 1]. A threshold converts this to a binary alert. The default is **0.5**, but this is rarely optimal. The evaluation includes a threshold sweep to show the precision/recall trade-off at different operating points, and identifies the threshold that maximises F1.
 
@@ -114,7 +114,7 @@ In production, the threshold would be chosen based on the relative cost of a mis
 
 ---
 
-## Results
+## ✅ Results
 
 Run `python main.py` to reproduce. Example output:
 
@@ -144,9 +144,9 @@ Confusion Matrix:
       0.70 |    0.9028 | 0.8694 | 0.8858
 ```
 
-F1 changes very little for different thresholds, which means the model is confident. For an alerting use case, the right threshold depends on the cost of a false alarm vs a missed incident.
+F1 changes very little for different thresholds, which means the model is confident 💪. For an alerting use case, the right threshold depends on the cost of a false alarm vs a missed incident.
   
-## Limitations
+## ⚠️ Limitations
 
 -  **Single operating condition.** FD001 has one fault mode and one operating regime. Real systems have multiple. The model would need retraining or a multi condition formulation
 
@@ -158,10 +158,10 @@ F1 changes very little for different thresholds, which means the model is confid
 
 ---
 
-## Adapting to a Real Alerting System
+## 🚀 Adapting to a Real Alerting System
  
--  **Adapt recall based on additioanl information.**
+-  **Adapt recall based on additional information.**
 
 -  **Stream inference.** Replace batch DataLoader with a sliding buffer that processes each new sensor reading as it arrives.
 
--  **Monitor for drift.** Track for distribution shift. If the model's average confidence drifts over time, that's a signal to retrain. Ideally the model should be able to incorporate new incoming data into future predictions without requiring a full retrain
+-  **Monitor for drift.** 📡 Track for distribution shift. If the model's average confidence drifts over time, that's a signal to retrain. Ideally the model should be able to incorporate new incoming data into future predictions without requiring a full retrain.
