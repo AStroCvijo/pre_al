@@ -1,4 +1,4 @@
-# Predictive Alerting — LSTM Incident Classifier
+# Predictive Alerting
   
 Binary classifier that predicts whether an engine will fail within the next **H** cycles, given the last **W** cycles of sensor readings. Trained on the NASA CMAPSS FD001 benchmark.
 
