@@ -30,7 +30,7 @@ label(t) = 1 if RUL(t + W) ≤ H
 
 - 14 sensor channels (after preprocessing removes constant/near-constant sensors)
 
-- Labels are heavily imbalanced: most timesteps are in the "normal" region; only the final cycles of each engine are incidents ⚠️
+- Labels are heavily imbalanced: most timesteps are in the "normal" region; only the final cycles of each engine are incidents
 
 The dataset is downloaded automatically via `kagglehub` from [faresls/fd001-prepared-data](https://www.kaggle.com/datasets/faresls/fd001-prepared-data).
 
@@ -104,7 +104,7 @@ Split is done with `GroupShuffleSplit` on `unit_nr`. This guarantees that no eng
 | ROC-AUC          | Threshold-independent ranking quality                        |
 | Confusion Matrix | Raw counts of TP / FP / FN / TN                              |
 
-In an alerting context, **recall is usually more important than precision** since a missed failure is more costly than a false alarm 💸. This informs threshold selection.
+In an alerting context, **recall is usually more important than precision** since a missed failure is more costly than a false alarm. This informs threshold selection.
 
 ### 🎯 Alert Threshold
 
@@ -144,7 +144,7 @@ Confusion Matrix:
       0.70 |    0.9028 | 0.8694 | 0.8858
 ```
 
-F1 changes very little for different thresholds, which means the model is confident 💪. For an alerting use case, the right threshold depends on the cost of a false alarm vs a missed incident.
+F1 changes very little for different thresholds, which means the model is confident. For an alerting use case, the right threshold depends on the cost of a false alarm vs a missed incident.
   
 ## ⚠️ Limitations
 
