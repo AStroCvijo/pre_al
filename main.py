@@ -5,22 +5,36 @@ from sklearn.metrics import classification_report, roc_auc_score, confusion_matr
 
 from data.dataset import prepare_data
 from model.LSTM import LSTM
+from utils.args import parse_args
 
 
-train_loader, test_loader, y_train, n_features = prepare_data()
+args = parse_args()
+
+train_loader, test_loader, y_train, n_features = prepare_data(
+    h=args.rul_threshold,
+    w=args.window,
+    test_size=args.test_size,
+    batch_size=args.batch_size,
+    random_state=args.seed,
+)
 
 # Initialize the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-model = LSTM(n_features=n_features).to(device)
+model = LSTM(
+    n_features=n_features,
+    hidden_size=args.hidden_size,
+    num_layers=args.num_layers,
+    dropout=args.dropout,
+).to(device)
 
 # Weighted loss
 pos_weight = torch.tensor([(1 - y_train.mean()) / y_train.mean()]).to(device)
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
 # Training
-epochs = 20
+epochs = args.epochs
 for epoch in range(epochs):
     model.train()
     total_loss = 0
@@ -50,7 +64,7 @@ all_probs = np.array(all_probs)
 all_labels = np.array(all_labels)
 
 # Alert threshold
-threshold = 0.5
+threshold = args.threshold
 preds = (all_probs >= threshold).astype(int)
 
 print(f"\n── Classification Report (threshold={threshold}) ──")

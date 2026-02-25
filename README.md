@@ -4,6 +4,33 @@ Binary classifier that predicts whether an engine will fail within the next **H*
 
 ---
 
+## 🚀 Quickstart
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/your-username/pre_al.git
+cd pre_al
+
+# 2. Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run training (downloads dataset automatically on first run)
+python main.py
+```
+
+A Kaggle account is required for the automatic dataset download. Set up your credentials once with:
+
+```bash
+pip install kaggle
+kaggle configure   # prompts for your API key
+```
+
+---
+
 ## 🔧 Problem Formulation
 
 At each timestep *t*, the model receives a window of *W* consecutive sensor readings and outputs the probability that a failure will occur within the next *H* cycles. This is framed as binary classification:
@@ -111,6 +138,66 @@ In an alerting context, **recall is usually more important than precision** sinc
 The model outputs a probability in [0, 1]. A threshold converts this to a binary alert. The default is **0.5**, but this is rarely optimal. The evaluation includes a threshold sweep to show the precision/recall trade-off at different operating points, and identifies the threshold that maximises F1.
 
 In production, the threshold would be chosen based on the relative cost of a missed incident vs. a false alarm.
+
+---
+
+## ⚙️ Configuration
+
+All hyperparameters are configurable via command-line arguments. Defaults match the values used to produce the results below.
+
+```
+
+python main.py [--rul-threshold N] [--window N] [--test-size F] [--batch-size N] [--seed N]
+
+[--hidden-size N] [--num-layers N] [--dropout F]
+
+[--epochs N] [--lr F] [--threshold F]
+
+```
+
+### Data
+
+| Argument          | Default | Description                                                       |
+|-------------------|---------|-------------------------------------------------------------------|
+| `--rul-threshold` | `30`    | RUL cycles below which an engine is labelled as near-failure      |
+| `--window`        | `30`    | Sliding window length in cycles                                   |
+| `--test-size`     | `0.2`   | Fraction of engines held out for testing                          |
+| `--batch-size`    | `64`    | DataLoader batch size                                             |
+| `--seed`          | `42`    | Random seed for the train/test split                              |
+
+### Model
+
+| Argument        | Default | Description                                                        |
+|-----------------|---------|--------------------------------------------------------------------|
+| `--hidden-size` | `64`    | LSTM hidden state size                                             |
+| `--num-layers`  | `2`     | Number of stacked LSTM layers                                      |
+| `--dropout`     | `0.3`   | Dropout probability applied in the LSTM stack and classifier head  |
+
+### Training
+
+| Argument      | Default | Description                                           |
+|---------------|---------|-------------------------------------------------------|
+| `--epochs`    | `20`    | Number of training epochs                             |
+| `--lr`        | `1e-3`  | Adam learning rate                                    |
+| `--threshold` | `0.5`   | Probability cutoff used for the classification report |
+
+### Examples
+
+Train with a longer horizon and a deeper model:
+
+```bash
+
+python  main.py  --rul-threshold  40  --hidden-size  128  --num-layers  3  --epochs  30
+
+```
+
+Optimise for recall by lowering the alert threshold:
+
+```bash
+
+python  main.py  --threshold  0.3
+
+```
 
 ---
 
