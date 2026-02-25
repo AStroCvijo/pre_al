@@ -8,7 +8,7 @@ Binary classifier that predicts whether an engine will fail within the next **H*
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/your-username/pre_al.git
+git clone https://github.com/AStroCvijo/pre_al.git
 cd pre_al
 
 # 2. Create and activate a virtual environment
